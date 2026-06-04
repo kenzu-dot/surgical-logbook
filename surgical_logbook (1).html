@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Surgical Residency Logbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a2e;
+  --ink-light: #3a3a5c;
+  --paper: #f5f0e8;
+  --paper-dark: #ede6d6;
+  --accent: #8b1a1a;
+  --accent-light: #c0392b;
+  --gold: #b8860b;
+  --rule: #c8b99a;
+  --tab-bg: #1e2235;
+  --tab-bg2: #252a3d;
+  --success: #2d6a4f;
+  --success-light: #40916c;
+  --warn: #e07b00;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:var(--ink);color:var(--ink);min-height:100vh}
+#shell{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+#sidebar{width:230px;flex-shrink:0;background:var(--tab-bg);display:flex;flex-direction:column}
+.sidebar-logo{padding:26px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.sidebar-logo h1{font-family:'Crimson Pro',serif;font-size:1.15rem;font-weight:600;color:#e8dcc8;letter-spacing:0.04em;line-height:1.3}
+.sidebar-logo span{font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--gold);letter-spacing:0.14em;text-transform:uppercase;display:block;margin-top:4px}
+.nav-section{padding:16px 0 4px}
+.nav-label{font-family:'DM Mono',monospace;font-size:0.57rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.28);padding:0 20px;margin-bottom:5px}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 20px;background:none;border:none;color:rgba(255,255,255,0.55);font-family:'Crimson Pro',serif;font-size:0.96rem;cursor:pointer;text-align:left;transition:all 0.18s;border-left:3px solid transparent}
+.nav-btn:hover{color:#e8dcc8;background:rgba(255,255,255,0.05)}
+.nav-btn.active{color:#e8dcc8;background:rgba(255,255,255,0.09);border-left-color:var(--gold)}
+.nav-btn .icon{font-size:1rem;width:20px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;gap:8px}
+.print-btn-side{width:100%;padding:9px 0;background:var(--accent);border:none;border-radius:4px;color:#fff;font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.18s}
+.print-btn-side:hover{background:var(--accent-light)}
+.sync-status{font-family:'DM Mono',monospace;font-size:0.58rem;text-align:center;letter-spacing:0.06em;padding:4px 0;border-radius:3px}
+.sync-status.ok{color:var(--success-light)}
+.sync-status.err{color:#e07b00}
+.sync-status.syncing{color:rgba(255,255,255,0.45)}
+
+/* MAIN */
+#main{flex:1;background:var(--paper);display:flex;flex-direction:column}
+.topbar{background:var(--paper-dark);border-bottom:1px solid var(--rule);padding:12px 32px;display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-light)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-date{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--gold);letter-spacing:0.06em}
+.cloud-badge{font-family:'DM Mono',monospace;font-size:0.6rem;padding:3px 8px;border-radius:3px;border:1px solid;letter-spacing:0.06em;cursor:pointer}
+.cloud-badge.connected{color:var(--success-light);border-color:var(--success-light)}
+.cloud-badge.disconnected{color:var(--warn);border-color:var(--warn)}
+
+/* SECTIONS */
+.section{display:none;padding:32px;flex:1;overflow-y:auto}
+.section.active{display:block}
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;padding-bottom:12px;border-bottom:1.5px solid var(--rule)}
+.section-title{font-size:1.7rem;font-weight:300;color:var(--ink);letter-spacing:0.01em}
+.section-title em{font-style:italic;color:var(--accent)}
+.add-btn{padding:8px 20px;background:var(--ink);color:var(--paper);border:none;border-radius:3px;font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.18s}
+.add-btn:hover{background:var(--accent)}
+
+/* TABLES */
+.log-table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.9rem}
+thead tr{background:var(--ink);color:var(--paper)}
+thead th{padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:400;text-align:left;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--rule);transition:background 0.12s}
+tbody tr:hover{background:var(--paper-dark)}
+tbody td{padding:9px 12px;color:var(--ink-light);vertical-align:middle}
+tbody td:first-child{color:var(--ink);font-weight:600}
+.empty-row td{text-align:center;padding:40px;color:var(--rule);font-style:italic;font-size:1rem}
+
+/* ROLE & OUTCOME — plain text, print-safe */
+.role-badge,.outcome-badge{font-size:0.88rem;color:var(--ink)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,26,46,0.6);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--paper);border-radius:6px;width:min(680px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 16px 48px rgba(26,26,46,0.4);animation:slideUp 0.22s ease}
+@keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-head{background:var(--ink);color:var(--paper);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-radius:6px 6px 0 0;position:sticky;top:0;z-index:1}
+.modal-head h2{font-size:1.15rem;font-weight:400;letter-spacing:0.03em}
+.modal-close{background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;line-height:1;transition:color 0.15s}
+.modal-close:hover{color:#fff}
+.modal-body{padding:24px}
+.form-group{margin-bottom:15px}
+.form-group label{display:block;font-family:'DM Mono',monospace;font-size:0.63rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1px solid var(--rule);background:#fff;border-radius:3px;font-family:'Crimson Pro',serif;font-size:1rem;color:var(--ink);outline:none;transition:border-color 0.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:64px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.modal-foot{padding:16px 24px;border-top:1px solid var(--rule);display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:var(--paper)}
+.btn-cancel{padding:8px 18px;background:none;border:1px solid var(--rule);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;cursor:pointer;color:var(--ink-light);transition:border-color 0.15s}
+.btn-cancel:hover{border-color:var(--ink)}
+.btn-save{padding:8px 22px;background:var(--accent);border:none;border-radius:3px;font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
+.btn-save:hover{background:var(--accent-light)}
+.del-btn{padding:3px 9px;background:none;border:1px solid #e0c0c0;border-radius:2px;color:var(--accent);font-family:'DM Mono',monospace;font-size:0.58rem;cursor:pointer;transition:all 0.15s}
+.del-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* CLOUD SETUP PANEL */
+.cloud-panel{background:#fff;border:1px solid var(--rule);border-radius:5px;padding:24px;margin-bottom:28px}
+.cloud-panel h3{font-size:1.1rem;font-weight:400;color:var(--accent);margin-bottom:8px}
+.cloud-panel p{font-size:0.9rem;color:var(--ink-light);margin-bottom:14px;line-height:1.6}
+.cloud-steps{counter-reset:steps;list-style:none;margin-bottom:16px}
+.cloud-steps li{counter-increment:steps;padding:7px 0 7px 36px;position:relative;font-size:0.9rem;color:var(--ink-light);border-bottom:1px dotted var(--rule)}
+.cloud-steps li::before{content:counter(steps);position:absolute;left:0;top:7px;width:22px;height:22px;background:var(--ink);color:var(--paper);border-radius:50%;font-family:'DM Mono',monospace;font-size:0.65rem;display:flex;align-items:center;justify-content:center;font-weight:500}
+.cloud-steps li a{color:var(--accent);text-decoration:none}
+.cloud-steps li a:hover{text-decoration:underline}
+.cloud-input-row{display:flex;gap:10px;align-items:center}
+.cloud-input-row input{flex:1;padding:9px 12px;border:1px solid var(--rule);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none;color:var(--ink)}
+.cloud-input-row input:focus{border-color:var(--accent)}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:var(--ink);color:var(--paper);border-radius:5px;padding:18px;text-align:center}
+.stat-number{font-size:2.3rem;font-weight:300;color:var(--gold);line-height:1;margin-bottom:5px}
+.stat-label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.45)}
+.dash-tables{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.dash-box h3{font-size:1rem;font-weight:400;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rule);color:var(--accent);letter-spacing:0.04em}
+.dash-list{list-style:none}
+.dash-list li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted var(--rule);font-size:0.9rem;color:var(--ink-light)}
+.dash-list li span{font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);font-weight:500}
+
+/* OP TABLE specifics */
+.op-count{text-align:center;font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--ink);font-weight:500}
+.op-total{background:var(--paper-dark);font-weight:700;color:var(--accent)!important}
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.filter-bar label{font-family:'DM Mono',monospace;font-size:0.63rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light)}
+.filter-bar input,.filter-bar select{padding:6px 10px;border:1px solid var(--rule);border-radius:3px;font-family:'Crimson Pro',serif;font-size:0.9rem;color:var(--ink);outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+
+/* PRINT */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff}
+  #shell{display:block}
+  #sidebar,.topbar,.add-btn,.del-btn,.modal-overlay,.cloud-panel,.filter-bar .add-btn,.filter-bar .btn-cancel{display:none!important}
+  #main{background:#fff}
+  .section{display:block!important;padding:18px;page-break-after:always}
+  thead tr{background:#333!important}
+  thead th{color:#fff!important}
+  tbody tr:hover{background:transparent!important}
+  .stat-card{background:#eee!important;color:#000!important;border:1px solid #999}
+  .stat-number{color:#8b1a1a!important}
+  .dash-tables{grid-template-columns:1fr}
+  .cloud-panel,.sync-status{display:none!important}
+}
+
+.sig-cell{min-width:90px;width:90px}
+@media print{
+  .sig-cell{min-width:110px;width:110px;border-bottom:1px solid #999 !important}
+  .no-print{display:none!important}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="shell">
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <h1>Surgical<br>Logbook</h1>
+    <span>Residency Registry</span>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <button class="nav-btn active" onclick="showSection('dashboard',this)"><span class="icon">◈</span> Dashboard</button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Records</div>
+    <button class="nav-btn" onclick="showSection('training',this)"><span class="icon">🏥</span> Training Posts</button>
+    <button class="nav-btn" onclick="showSection('education',this)"><span class="icon">📚</span> Education</button>
+    <button class="nav-btn" onclick="showSection('operations',this)"><span class="icon">🔪</span> Operations</button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Settings</div>
+    <button class="nav-btn" onclick="showSection('cloud',this)"><span class="icon">☁</span> Cloud Sync</button>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sync-status syncing" id="sync-status-side">⬤ Local storage only</div>
+    <button class="print-btn-side" onclick="window.print()">⎙ Print Logbook</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-section">Dashboard</span>
+    <div class="topbar-right">
+      <span class="topbar-date" id="topbar-date"></span>
+      <span class="cloud-badge disconnected" id="cloud-badge" onclick="showSection('cloud', document.querySelector('.nav-btn:nth-child(4)'))">☁ Not Synced</span>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section class="section active" id="sec-dashboard">
+    <div class="section-header">
+      <h2 class="section-title">Residency <em>Overview</em></h2>
+    </div>
+    <div class="stats-row" id="stats-row"></div>
+    <div class="dash-tables">
+      <div class="dash-box"><h3>Recent Training Posts</h3><ul class="dash-list" id="dash-training"></ul></div>
+      <div class="dash-box"><h3>Top Procedures</h3><ul class="dash-list" id="dash-ops"></ul></div>
+    </div>
+  </section>
+
+  <!-- TRAINING -->
+  <section class="section" id="sec-training">
+    <div class="section-header">
+      <h2 class="section-title">Approved Training <em>Attachments</em></h2>
+      <button class="add-btn" onclick="openModal('training')">+ Add Attachment</button>
+    </div>
+    <div class="log-table-wrap">
+      <table id="training-table">
+        <thead><tr><th>#</th><th>Hospital</th><th>Specialty</th><th>Start Date</th><th>Finish Date</th><th>Consultant</th><th>Signature</th><th>Actions</th></tr></thead>
+        <tbody id="training-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- EDUCATION -->
+  <section class="section" id="sec-education">
+    <div class="section-header">
+      <h2 class="section-title">Education & Academic <em>Activities</em></h2>
+      <button class="add-btn" onclick="openModal('course')">+ Add Course</button>
+    </div>
+    <h3 style="font-size:1.05rem;font-weight:400;color:var(--ink-light);margin-bottom:12px;letter-spacing:0.03em">Courses</h3>
+    <div class="log-table-wrap" style="margin-bottom:30px">
+      <table id="courses-table">
+        <thead><tr><th>No</th><th>Course</th><th>Date</th><th>Place</th><th>Course Director</th><th>Signature</th><th>Actions</th></tr></thead>
+        <tbody id="courses-body"></tbody>
+      </table>
+    </div>
+    <h3 style="font-size:1.05rem;font-weight:400;color:var(--ink-light);margin-bottom:12px;letter-spacing:0.03em">Other Activities</h3>
+    <textarea id="other-activities" rows="6"
+      style="width:100%;padding:14px;border:1px solid var(--rule);background:#fff;border-radius:3px;font-family:'Crimson Pro',serif;font-size:1rem;color:var(--ink);resize:vertical;outline:none"
+      placeholder="Enter other academic and educational activities here…"
+      oninput="saveOtherActivities()"></textarea>
+  </section>
+
+  <!-- OPERATIONS -->
+  <section class="section" id="sec-operations">
+    <div class="section-header">
+      <h2 class="section-title">Operation <em>Log</em></h2>
+      <button class="add-btn" onclick="openModal('operation')">+ Add Operation</button>
+    </div>
+    <div class="filter-bar">
+      <label>From</label><input type="date" id="op-date-start">
+      <label>To</label><input type="date" id="op-date-end">
+      <label>Role</label>
+      <select id="op-role-filter" onchange="renderOperations()">
+        <option value="">All Roles</option>
+        <option value="1">1 – Primary Surgeon</option>
+        <option value="2">2 – First Assistant</option>
+        <option value="3">3 – Second Assistant</option>
+        <option value="4">4 – Observer</option>
+      </select>
+      <button onclick="renderOperations()" class="add-btn" style="padding:6px 14px">Filter</button>
+      <button onclick="clearOpFilter()" class="btn-cancel" style="padding:6px 14px">Clear</button>
+      <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light)" id="op-count-label"></span>
+    </div>
+    <div class="log-table-wrap">
+      <table id="op-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Date</th><th>MRN</th><th>Age</th><th>Sex</th>
+            <th>Diagnosis</th><th>Procedure</th><th>Role</th>
+            <th>Complications</th><th>Outcome</th><th>Remarks</th><th>Signature</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="op-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CLOUD SYNC -->
+  <section class="section" id="sec-cloud">
+    <div class="section-header">
+      <h2 class="section-title">Cloud <em>Sync</em></h2>
+    </div>
+
+    <!-- BANNER -->
+    <div style="background:#1e2235;color:#e8dcc8;border-radius:6px;padding:18px 22px;margin-bottom:24px;line-height:1.8;font-size:0.92rem">
+      <strong style="color:#f2c94c;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase">How cross-device sync works</strong><br>
+      This logbook is a single HTML file. When opened directly from your computer, each device has its own isolated local storage — they cannot see each other.
+      To sync across devices you need to either:<br>
+      <span style="color:#6fcf97">①</span> <strong>Host it online</strong> (GitHub Pages — free, permanent URL, recommended) and connect to Google Sheets, <em>or</em><br>
+      <span style="color:#6fcf97">②</span> <strong>Export → transfer the file → Import</strong> on the other device as a manual backup method.
+    </div>
+
+    <!-- OPTION 1: GITHUB PAGES -->
+    <div class="cloud-panel">
+      <h3>① Host on GitHub Pages <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#40916c;margin-left:8px;letter-spacing:0.08em">RECOMMENDED</span></h3>
+      <p style="font-size:0.9rem;color:var(--ink-light);margin-bottom:16px;line-height:1.7">
+        GitHub Pages gives your logbook a permanent <code style="font-size:0.8rem">https://</code> URL. Open that URL on any device — phone, tablet, laptop — and all data syncs through Google Sheets.
+      </p>
+      <ol class="cloud-steps">
+        <li>Create a free account at <a href="https://github.com" target="_blank">github.com</a> if you don't have one.</li>
+        <li>Click <strong>+</strong> (top right) → <strong>New repository</strong>. Name it <code style="font-size:0.8rem">surgical-logbook</code>. Set it to <strong>Public</strong>. Click <strong>Create repository</strong>.</li>
+        <li>On the next page click <strong>uploading an existing file</strong> → drag and drop this HTML file → click <strong>Commit changes</strong>.</li>
+        <li>Go to <strong>Settings → Pages</strong> (left sidebar) → under Source select <strong>Deploy from branch</strong> → branch: <strong>main</strong> → folder: <strong>/ (root)</strong> → click <strong>Save</strong>.</li>
+        <li>Wait ~60 seconds. Your logbook will be live at:<br>
+          <code style="font-size:0.8rem">https://YOUR-USERNAME.github.io/surgical-logbook/surgical_logbook.html</code></li>
+        <li>Open that URL on every device. Bookmark it. This is now your logbook URL.</li>
+      </ol>
+      <div style="background:#f0faf4;border:1px solid #40916c;border-radius:4px;padding:12px 16px;font-size:0.85rem;color:#1a3a2a;line-height:1.7">
+        <strong>After hosting:</strong> set up Google Sheets sync below, then use <strong>Push</strong> after adding entries and <strong>Pull</strong> when opening on a new device to get the latest data.
+      </div>
+    </div>
+
+    <!-- OPTION 2: GOOGLE SHEETS SYNC -->
+    <div class="cloud-panel">
+      <h3>② Google Sheets Sync</h3>
+      <p style="font-size:0.9rem;color:var(--ink-light);margin-bottom:14px;line-height:1.7">
+        Stores all your data in a Google Sheet in your Drive. Works best when the logbook is hosted online (Option ①). Also works locally as a manual backup — push before closing, pull after opening.
+      </p>
+
+      <div style="border-bottom:1px solid var(--rule);margin-bottom:16px;padding-bottom:4px">
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light)">Step A — Deploy the Apps Script</span>
+      </div>
+      <ol class="cloud-steps" style="margin-bottom:16px">
+        <li>Open <a href="https://sheets.new" target="_blank">sheets.new</a> → name the sheet <strong>Surgical Logbook</strong>.</li>
+        <li><strong>Extensions → Apps Script</strong> → select all existing code → delete it.</li>
+        <li>Click <strong>⎘ Copy Script</strong> below → click inside the green box → <strong>Ctrl+A</strong> then <strong>Ctrl+C</strong> → paste into Apps Script → <strong>Ctrl+S</strong> to save.</li>
+        <li>Check the left panel shows three functions: <code style="font-size:0.78rem">doGet</code>, <code style="font-size:0.78rem">doPost</code>, <code style="font-size:0.78rem">out</code>. If not, the paste failed — try again.</li>
+        <li><strong>Deploy → New deployment</strong> → Type: <strong>Web app</strong> → Execute as: <strong>Me</strong> → Who has access: <strong>Anyone</strong> → <strong>Deploy</strong> → <strong>Authorise access</strong> → pick your Google account → <strong>Allow</strong>.</li>
+        <li>Copy the URL ending in <code style="font-size:0.78rem">/exec</code>.</li>
+      </ol>
+      <button id="copy-script-btn" onclick="copyScript()" class="add-btn" style="margin-bottom:12px">⎘ Copy Script</button>
+      <div id="script-textarea-wrap" style="display:none;margin-bottom:16px">
+        <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#2d6a4f;margin-bottom:7px">✓ Click inside → Ctrl+A → Ctrl+C → paste into Apps Script</p>
+        <textarea id="script-select-ta" readonly onclick="this.focus();this.select()"
+          style="width:100%;height:220px;padding:12px;border:2px solid #2d6a4f;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.68rem;color:#1a1a2e;background:#f0faf4;resize:vertical;outline:none;cursor:text"></textarea>
+      </div>
+
+      <div style="border-bottom:1px solid var(--rule);margin-bottom:16px;padding-bottom:4px;margin-top:20px">
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light)">Step B — Verify &amp; Connect</span>
+      </div>
+      <p style="font-size:0.88rem;color:var(--ink-light);margin-bottom:12px;line-height:1.6">
+        Paste your <code style="font-size:0.8rem">/exec</code> URL below. Click <strong>↗ Test in Tab</strong> — you should see <code style="font-size:0.8rem">{"ok":true,"msg":"pong"}</code>. Then click <strong>Save &amp; Connect</strong>.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+        <input type="url" id="gsheet-url" placeholder="https://script.google.com/macros/s/…/exec"
+          style="flex:1;min-width:240px;padding:9px 12px;border:1px solid var(--rule);border-radius:3px;font-family:'DM Mono',monospace;font-size:0.72rem;outline:none;color:var(--ink)">
+        <button class="add-btn" style="padding:9px 14px;white-space:nowrap" onclick="testInTab()">↗ Test in Tab</button>
+        <button class="btn-save" onclick="saveAndConnect()" style="white-space:nowrap">✓ Save &amp; Connect</button>
+        <button class="btn-cancel" onclick="disconnectCloud()" style="white-space:nowrap">Disconnect</button>
+      </div>
+      <div id="cloud-test-msg" style="font-family:'DM Mono',monospace;font-size:0.72rem;line-height:1.8;min-height:20px"></div>
+
+      <div style="border-bottom:1px solid var(--rule);margin-bottom:16px;padding-bottom:4px;margin-top:20px">
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light)">Step C — Push &amp; Pull</span>
+      </div>
+      <p style="font-size:0.88rem;color:var(--ink-light);margin-bottom:12px;line-height:1.6">
+        <strong>Push</strong> after adding entries on this device. <strong>Pull</strong> when opening on a different device to get the latest data.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-save" onclick="pushToCloud()">⬆ Push Local → Cloud</button>
+        <button class="add-btn" onclick="pullFromCloud()">⬇ Pull Cloud → Local</button>
+      </div>
+      <div id="sync-msg" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:0.72rem;min-height:20px"></div>
+    </div>
+
+    <!-- OPTION 3: EXPORT / IMPORT -->
+    <div class="cloud-panel">
+      <h3>③ Manual Export / Import <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light);margin-left:8px;letter-spacing:0.08em">WORKS OFFLINE</span></h3>
+      <p style="font-size:0.9rem;color:var(--ink-light);margin-bottom:16px;line-height:1.7">
+        Export all your data as a <code style="font-size:0.8rem">.json</code> file. Transfer it to another device (WhatsApp, email, USB) and import it there. Also useful as a regular backup.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-save" onclick="exportData()">⬇ Export Data (.json)</button>
+        <button class="add-btn" onclick="document.getElementById('import-input').click()">⬆ Import Data (.json)</button>
+        <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <div id="export-msg" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:0.72rem;min-height:20px;color:#40916c"></div>
+    </div>
+
+  </section>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-title">Add Entry</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== STATE ========== */
+let state = { training:[], courses:[], operations:[], otherActivities:'', consultant:'', cloudUrl:'' };
+let currentModal = null, editIndex = null;
+
+const ROLE_LABELS = { '1':'1 – Primary Surgeon','2':'2 – First Assistant','3':'3 – Second Assistant','4':'4 – Observer' };
+// role classes removed — plain text now
+
+/* ========== PERSIST ========== */
+function save() { localStorage.setItem('surg_lb_v3', JSON.stringify(state)); }
+function load() { const d=localStorage.getItem('surg_lb_v3'); if(d) state=JSON.parse(d); }
+
+/* ========== BOOT ========== */
+load();
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+document.getElementById('other-activities').value = state.otherActivities||'';
+if(state.cloudUrl){
+  const urlEl=document.getElementById('gsheet-url');
+  if(urlEl) urlEl.value=state.cloudUrl;
+  updateCloudBadge(true);
+} else { updateCloudBadge(false); }
+injectAppsScript();
+renderAll();
+
+/* ========== NAV ========== */
+function showSection(id, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  const labels={dashboard:'Dashboard',training:'Training Attachments',education:'Education & Activities',operations:'Operations',cloud:'Cloud Sync'};
+  document.getElementById('topbar-section').textContent = labels[id]||'';
+  if(id==='dashboard') renderDashboard();
+}
+
+/* ========== RENDER ALL ========== */
+function renderAll(){ renderTraining(); renderCourses(); renderOperations(); renderDashboard(); }
+
+/* ========== TRAINING ========== */
+function renderTraining(){
+  const tb=document.getElementById('training-body');
+  if(!state.training.length){ tb.innerHTML='<tr class="empty-row"><td colspan="7">No training attachments recorded yet.</td></tr>'; return; }
+  const sorted_t = [...state.training].sort((a,b)=>a.start.localeCompare(b.start));
+  tb.innerHTML=sorted_t.map((r,i)=>{
+    const realIdx=state.training.indexOf(r);
+    return `<tr>
+      <td>${i+1}</td><td>${esc(r.hospital)}</td><td>${esc(r.specialty)}</td>
+      <td>${fmt(r.start)}</td><td>${fmt(r.finish)}</td><td>${esc(r.consultant)}</td>
+      <td class="sig-cell"></td>
+      <td><button class="del-btn" onclick="deleteEntry('training',${realIdx})">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ========== COURSES ========== */
+function renderCourses(){
+  const tb=document.getElementById('courses-body');
+  if(!state.courses.length){ tb.innerHTML='<tr class="empty-row"><td colspan="6">No courses recorded yet.</td></tr>'; return; }
+  const sorted_c = [...state.courses].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  tb.innerHTML=sorted_c.map((r,i)=>{
+    const realIdx=state.courses.indexOf(r);
+    return `<tr>
+      <td>${i+1}</td><td>${esc(r.course)}</td><td>${fmt(r.date)}</td>
+      <td>${esc(r.place)}</td><td>${esc(r.director)}</td>
+      <td class="sig-cell"></td>
+      <td><button class="del-btn" onclick="deleteEntry('courses',${realIdx})">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ========== OPERATIONS ========== */
+function renderOperations(){
+  const tb=document.getElementById('op-body');
+  const s=document.getElementById('op-date-start').value;
+  const e=document.getElementById('op-date-end').value;
+  const rf=document.getElementById('op-role-filter').value;
+
+  let filtered=state.operations.filter(op=>{
+    if(s && op.date<s) return false;
+    if(e && op.date>e) return false;
+    if(rf && op.role!==rf) return false;
+    return true;
+  }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+  document.getElementById('op-count-label').textContent = filtered.length + ' record' + (filtered.length!==1?'s':'');
+
+  if(!filtered.length){ tb.innerHTML='<tr class="empty-row"><td colspan="12">No operations found.</td></tr>'; return; }
+
+  tb.innerHTML=filtered.map((op,fi)=>{
+    const realIdx = state.operations.indexOf(op);
+    return `<tr>
+      <td>${fi+1}</td>
+      <td style="white-space:nowrap">${fmt(op.date)}</td>
+      <td><code style="font-size:0.78rem">${esc(op.mrn)}</code></td>
+      <td>${esc(op.age)}</td>
+      <td>${esc(op.sex)}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(op.diagnosis)}">${esc(op.diagnosis)}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(op.procedure)}"><strong>${esc(op.procedure)}</strong></td>
+      <td>${ROLE_LABELS[op.role]||esc(op.role)}</td>
+      <td>${esc(op.complications)||'None'}</td>
+      <td>${esc(op.outcome)}</td>
+      <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(op.remarks)}">${esc(op.remarks)||'—'}</td>
+      <td class="sig-cell"></td>
+      <td>
+        <button class="del-btn" onclick="editOp(${realIdx})" style="margin-right:4px;color:var(--gold);border-color:#e0d080">Edit</button>
+        <button class="del-btn" onclick="deleteEntry('operations',${realIdx})">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function clearOpFilter(){
+  document.getElementById('op-date-start').value='';
+  document.getElementById('op-date-end').value='';
+  document.getElementById('op-role-filter').value='';
+  renderOperations();
+}
+
+function editOp(idx){ openModal('operation', idx); }
+
+/* ========== DASHBOARD ========== */
+function renderDashboard(){
+  const totalOps=state.operations.length;
+  const roleOneCt=state.operations.filter(o=>o.role==='1').length;
+  const statsEl=document.getElementById('stats-row');
+  statsEl.innerHTML=`
+    <div class="stat-card"><div class="stat-number">${state.training.length}</div><div class="stat-label">Training Posts</div></div>
+    <div class="stat-card"><div class="stat-number">${state.courses.length}</div><div class="stat-label">Courses</div></div>
+    <div class="stat-card"><div class="stat-number">${totalOps}</div><div class="stat-label">Total Operations</div></div>
+    <div class="stat-card"><div class="stat-number">${roleOneCt}</div><div class="stat-label">As Primary Surgeon</div></div>
+  `;
+  const dtEl=document.getElementById('dash-training');
+  dtEl.innerHTML=!state.training.length
+    ? '<li><em style="color:var(--rule)">No records</em></li>'
+    : state.training.slice(-5).reverse().map(r=>`<li>${esc(r.hospital)} — ${esc(r.specialty)} <span>${fmt(r.start)}</span></li>`).join('');
+
+  const opCounts={};
+  state.operations.forEach(o=>{ opCounts[o.procedure]=(opCounts[o.procedure]||0)+1; });
+  const sorted=Object.entries(opCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const doEl=document.getElementById('dash-ops');
+  doEl.innerHTML=!sorted.length
+    ? '<li><em style="color:var(--rule)">No records</em></li>'
+    : sorted.map(([n,c])=>`<li>${esc(n)} <span>${c}</span></li>`).join('');
+}
+
+/* ========== MODALS ========== */
+function openModal(type, idx=null){
+  currentModal=type; editIndex=idx;
+  const overlay=document.getElementById('modal-overlay');
+  const body=document.getElementById('modal-body');
+  const title=document.getElementById('modal-title');
+
+  if(type==='training'){
+    title.textContent=idx!==null?'Edit Training Attachment':'Add Training Attachment';
+    const r=idx!==null?state.training[idx]:{};
+    body.innerHTML=`
+      <div class="form-row">
+        <div class="form-group"><label>Hospital</label><input id="f-hospital" value="${esc(r.hospital||'')}"></div>
+        <div class="form-group"><label>Specialty</label><input id="f-specialty" value="${esc(r.specialty||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="f-start" value="${r.start||''}"></div>
+        <div class="form-group"><label>Finish Date</label><input type="date" id="f-finish" value="${r.finish||''}"></div>
+      </div>
+      <div class="form-group"><label>Consultant Name</label><input id="f-consultant" value="${esc(r.consultant||'')}"></div>`;
+  }
+  else if(type==='course'){
+    title.textContent='Add Course';
+    const r=idx!==null?state.courses[idx]:{};
+    body.innerHTML=`
+      <div class="form-group"><label>Course Name</label><input id="f-course" value="${esc(r.course||'')}"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Date</label><input type="date" id="f-date" value="${r.date||''}"></div>
+        <div class="form-group"><label>Place</label><input id="f-place" value="${esc(r.place||'')}"></div>
+      </div>
+      <div class="form-group"><label>Course Director</label><input id="f-director" value="${esc(r.director||'')}"></div>`;
+  }
+  else if(type==='operation'){
+    title.textContent=idx!==null?'Edit Operation':'Add Operation';
+    const r=idx!==null?state.operations[idx]:{};
+    const procList=[...new Set(state.operations.map(o=>o.procedure))].filter(Boolean);
+    const diagList=[...new Set(state.operations.map(o=>o.diagnosis))].filter(Boolean);
+    body.innerHTML=`
+      <div class="form-row-3">
+        <div class="form-group"><label>Date</label><input type="date" id="f-opdate" value="${r.date||new Date().toISOString().slice(0,10)}"></div>
+        <div class="form-group"><label>MRN</label><input id="f-mrn" placeholder="e.g. 00123456" value="${esc(r.mrn||'')}"></div>
+        <div class="form-group"><label>Age</label><input type="number" id="f-age" min="0" max="120" placeholder="Years" value="${esc(r.age||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Sex</label>
+          <select id="f-sex">
+            <option value="" ${!r.sex?'selected':''}>— Select —</option>
+            <option value="Male" ${r.sex==='Male'?'selected':''}>Male</option>
+            <option value="Female" ${r.sex==='Female'?'selected':''}>Female</option>
+            <option value="Other" ${r.sex==='Other'?'selected':''}>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Role</label>
+          <select id="f-oprole">
+            <option value="1" ${r.role==='1'?'selected':''}>1 – Primary Surgeon</option>
+            <option value="2" ${r.role==='2'?'selected':''}>2 – First Assistant</option>
+            <option value="3" ${r.role==='3'?'selected':''}>3 – Second Assistant</option>
+            <option value="4" ${r.role==='4'?'selected':''}>4 – Observer</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Diagnosis</label>
+        <input id="f-diagnosis" list="diag-list" value="${esc(r.diagnosis||'')}" placeholder="Primary diagnosis">
+        <datalist id="diag-list">${diagList.map(d=>`<option value="${esc(d)}">`).join('')}</datalist>
+      </div>
+      <div class="form-group"><label>Procedure</label>
+        <input id="f-procedure" list="proc-list" value="${esc(r.procedure||'')}" placeholder="e.g. Laparoscopic Appendicectomy">
+        <datalist id="proc-list">${procList.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Complications</label>
+          <select id="f-complications">
+            <option value="None" ${(r.complications||'None')==='None'?'selected':''}>None</option>
+            <option value="Wound infection" ${r.complications==='Wound infection'?'selected':''}>Wound infection</option>
+            <option value="Bleeding" ${r.complications==='Bleeding'?'selected':''}>Bleeding</option>
+            <option value="Anastomotic leak" ${r.complications==='Anastomotic leak'?'selected':''}>Anastomotic leak</option>
+            <option value="SSI" ${r.complications==='SSI'?'selected':''}>SSI</option>
+            <option value="Ileus" ${r.complications==='Ileus'?'selected':''}>Ileus</option>
+            <option value="Other" ${r.complications==='Other'?'selected':''}>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Outcome</label>
+          <select id="f-outcome">
+            <option value="Discharged" ${(r.outcome||'Discharged')==='Discharged'?'selected':''}>Discharged</option>
+            <option value="Death" ${r.outcome==='Death'?'selected':''}>Death</option>
+            <option value="ICU Admission" ${r.outcome==='ICU Admission'?'selected':''}>ICU Admission</option>
+            <option value="Other" ${r.outcome==='Other'?'selected':''}>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Remarks</label>
+        <textarea id="f-remarks" placeholder="Any additional notes, supervisor feedback, learning points…">${esc(r.remarks||'')}</textarea>
+      </div>`;
+  }
+  overlay.classList.add('open');
+}
+
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); currentModal=null; editIndex=null; }
+
+function saveEntry(){
+  if(currentModal==='training'){
+    const r={ hospital:val('f-hospital'), specialty:val('f-specialty'), start:val('f-start'), finish:val('f-finish'), consultant:val('f-consultant') };
+    if(!r.hospital){ alert('Hospital is required.'); return; }
+    if(editIndex!==null) state.training[editIndex]=r; else state.training.push(r);
+    renderTraining();
+  } else if(currentModal==='course'){
+    const r={ course:val('f-course'), date:val('f-date'), place:val('f-place'), director:val('f-director') };
+    if(!r.course){ alert('Course name is required.'); return; }
+    if(editIndex!==null) state.courses[editIndex]=r; else state.courses.push(r);
+    renderCourses();
+  } else if(currentModal==='operation'){
+    const r={
+      date:val('f-opdate'), mrn:val('f-mrn'), age:val('f-age'),
+      sex:val('f-sex'), diagnosis:val('f-diagnosis'), procedure:val('f-procedure'),
+      role:val('f-oprole'), complications:val('f-complications'),
+      outcome:val('f-outcome'), remarks:val('f-remarks')
+    };
+    if(!r.procedure){ alert('Procedure is required.'); return; }
+    if(!r.date){ alert('Date is required.'); return; }
+    if(editIndex!==null) state.operations[editIndex]=r; else state.operations.push(r);
+    renderOperations();
+  }
+  save();
+  renderDashboard();
+  closeModal();
+  if(state.cloudUrl) autoSync();
+}
+
+function deleteEntry(type, idx){
+  if(!confirm('Remove this entry?')) return;
+  state[type].splice(idx,1);
+  save(); renderAll();
+  if(state.cloudUrl) autoSync();
+}
+
+function saveOtherActivities(){ state.otherActivities=document.getElementById('other-activities').value; save(); }
+
+/* ========== CLOUD SYNC ========== */
+function updateCloudBadge(connected){
+  const b=document.getElementById('cloud-badge');
+  const s=document.getElementById('sync-status-side');
+  if(connected){
+    b.className='cloud-badge connected'; b.textContent='☁ Synced';
+    s.className='sync-status ok'; s.textContent='⬤ Cloud connected';
+  } else {
+    b.className='cloud-badge disconnected'; b.textContent='☁ Not Synced';
+    s.className='sync-status err'; s.textContent='⬤ Local only';
+  }
+}
+
+function setMsg(el, type, text){
+  if(!el) return;
+  el.style.color = type==='ok' ? '#40916c' : type==='error' ? '#e07b00' : '#b8860b';
+  el.textContent = text;
+}
+
+function testInTab(){
+  const url = (document.getElementById('gsheet-url')||{}).value||'';
+  if(!url.trim()){ alert('Paste your Web App URL first.'); return; }
+  window.open(url.trim() + '?action=ping', '_blank');
+}
+
+function saveAndConnect(){
+  const urlEl = document.getElementById('gsheet-url');
+  const url = (urlEl ? urlEl.value : '').trim();
+  const msg  = document.getElementById('cloud-test-msg');
+  if(!url){ setMsg(msg,'error','Paste your Web App URL first.'); return; }
+  if(!url.startsWith('https://script.google.com')){
+    setMsg(msg,'error','That does not look like a valid Apps Script URL. It must start with https://script.google.com'); return;
+  }
+  state.cloudUrl = url; save();
+  updateCloudBadge(true);
+  setMsg(msg,'ok','✓ URL saved. Click Push to upload your data, or Pull to download from cloud.');
+}
+
+function disconnectCloud(){
+  state.cloudUrl=''; save();
+  const el=document.getElementById('gsheet-url');
+  if(el) el.value='';
+  updateCloudBadge(false);
+  const msg=document.getElementById('cloud-test-msg');
+  if(msg) setMsg(msg,'warn','Disconnected.');
+}
+
+async function pushToCloud(){
+  if(!state.cloudUrl){ alert('Connect to Google Sheets first (Cloud Sync → Step B).'); return; }
+  const msg=document.getElementById('sync-msg');
+  setMsg(msg,'warn','⏳ Pushing…');
+  const payload = {};
+  Object.keys(state).forEach(k=>{ if(k!=='cloudUrl') payload[k]=state[k]; });
+  try {
+    // Try with CORS first
+    const res = await fetch(state.cloudUrl, {
+      method:'POST', mode:'cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'push', data:payload})
+    });
+    const json = await res.json();
+    if(json.ok){ setMsg(msg,'ok','✓ Pushed at '+new Date().toLocaleTimeString()); updateCloudBadge(true); return; }
+    throw new Error(json.error||'error');
+  } catch(e1){
+    // Fallback: no-cors (can't read response but POST goes through)
+    try {
+      await fetch(state.cloudUrl, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'push', data:payload})
+      });
+      setMsg(msg,'ok','✓ Pushed at '+new Date().toLocaleTimeString()+' — check your Sheet to confirm.');
+      updateCloudBadge(true);
+    } catch(e2){ setMsg(msg,'error','✗ Push failed: '+e2.message); }
+  }
+}
+
+async function pullFromCloud(){
+  if(!state.cloudUrl){ alert('Connect to Google Sheets first (Cloud Sync → Step B).'); return; }
+  const msg=document.getElementById('sync-msg');
+  setMsg(msg,'warn','⏳ Pulling…');
+  try {
+    const res = await fetch(state.cloudUrl+'?action=pull', {mode:'cors'});
+    const json = await res.json();
+    if(json.ok && json.data){
+      if(!confirm('This will replace ALL local data with cloud data. Continue?')) return;
+      const saved=state.cloudUrl;
+      state=Object.assign({},json.data,{cloudUrl:saved});
+      save(); renderAll();
+      document.getElementById('other-activities').value=state.otherActivities||'';
+      const urlEl=document.getElementById('gsheet-url');
+      if(urlEl) urlEl.value=state.cloudUrl||'';
+      setMsg(msg,'ok','✓ Pulled at '+new Date().toLocaleTimeString());
+      updateCloudBadge(true);
+    } else { throw new Error(json.error||'No data returned. Push data first.'); }
+  } catch(e){ setMsg(msg,'error','✗ Pull failed: '+e.message); }
+}
+
+/* ── EXPORT / IMPORT ── */
+function exportData(){
+  const exportState = {};
+  Object.keys(state).forEach(k=>{ if(k!=='cloudUrl') exportState[k]=state[k]; });
+  const blob = new Blob([JSON.stringify(exportState, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'surgical_logbook_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  const msg=document.getElementById('export-msg');
+  if(msg) msg.textContent='✓ Exported successfully. Transfer this file to your other device and import it there.';
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const imported = JSON.parse(e.target.result);
+      if(!imported.operations && !imported.training && !imported.courses){
+        alert('This does not look like a valid logbook file.'); return;
+      }
+      if(!confirm('Import this data? It will be MERGED with your current data (existing entries kept, new ones added).')) return;
+      // Merge: add entries not already present (by simple JSON comparison)
+      ['training','courses','operations'].forEach(key=>{
+        const incoming = imported[key]||[];
+        const existing = state[key]||[];
+        incoming.forEach(item=>{
+          const exists = existing.some(e=>JSON.stringify(e)===JSON.stringify(item));
+          if(!exists) existing.push(item);
+        });
+        state[key] = existing;
+      });
+      if(imported.otherActivities && !state.otherActivities) state.otherActivities=imported.otherActivities;
+      save(); renderAll();
+      document.getElementById('other-activities').value=state.otherActivities||'';
+      const msg=document.getElementById('export-msg');
+      if(msg){ msg.style.color='#40916c'; msg.textContent='✓ Data imported and merged successfully.'; }
+    } catch(err){ alert('Failed to read file: '+err.message); }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+let syncTimer=null;
+function autoSync(){ if(!state.cloudUrl) return; clearTimeout(syncTimer); syncTimer=setTimeout(pushToCloud,5000); }
+
+/* ========== APPS SCRIPT ========== */
+var APPS_SCRIPT_CODE = '';
+function injectAppsScript(){
+  var el = document.getElementById('apps-script-source');
+  APPS_SCRIPT_CODE = el ? el.textContent.trim() : '';
+  var display = document.getElementById('apps-script-code');
+  if(display) display.textContent = APPS_SCRIPT_CODE;
+}
+
+function copyScript(){
+  const code = APPS_SCRIPT_CODE || document.getElementById('apps-script-source').textContent.trim();
+  // Method 1: modern clipboard API
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code)
+      .then(()=>{ showCopySuccess(); showScriptTextarea(code); })
+      .catch(()=>{ showScriptTextarea(code); });
+    return;
+  }
+  // Method 2: execCommand fallback
+  const ta = document.createElement('textarea');
+  ta.value = code;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try{
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch(e){ document.body.removeChild(ta); }
+  showScriptTextarea(code);
+  showCopySuccess();
+}
+
+function showCopySuccess(){
+  const btn = document.getElementById('copy-script-btn');
+  if(btn){ const orig=btn.textContent; btn.textContent='✓ Copied!'; btn.style.background='#2d6a4f'; setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; },3000); }
+}
+
+function showScriptTextarea(code){
+  const wrap = document.getElementById('script-textarea-wrap');
+  const ta   = document.getElementById('script-select-ta');
+  if(!wrap||!ta) return;
+  // Always read from the most reliable source
+  const finalCode = APPS_SCRIPT_CODE || document.getElementById('apps-script-source').textContent.trim() || code || '';
+  wrap.style.display = 'block';
+  ta.value = finalCode;
+  setTimeout(function(){ ta.focus(); ta.select(); }, 50);
+}
+
+/* ========== JSONP (CORS-free requests to Apps Script) ========== */
+function jsonp(url, params, onSuccess, onError){
+  const cbName = 'lb_cb_' + Date.now();
+  const script = document.createElement('script');
+  let settled = false;
+
+  window[cbName] = function(data){
+    if(settled) return; settled = true;
+    clearTimeout(timer);
+    script.remove();
+    delete window[cbName];
+    onSuccess(data);
+  };
+
+  const timer = setTimeout(function(){
+    if(settled) return; settled = true;
+    script.remove();
+    delete window[cbName];
+    if(onError) onError(new Error('Timeout'));
+  }, 12000);
+
+  const qs = Object.keys(params).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k])).join('&');
+  script.src = url + '?' + qs + '&callback=' + cbName;
+  script.onerror = function(){
+    if(settled) return; settled = true;
+    clearTimeout(timer);
+    script.remove();
+    delete window[cbName];
+    if(onError) onError(new Error('Script load error'));
+  };
+  document.head.appendChild(script);
+}
+
+/* ========== HELPERS ========== */
+function val(id){ return (document.getElementById(id)?.value||'').trim(); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(d){ if(!d) return '—'; const [y,m,day]=d.split('-'); const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${parseInt(day)} ${mo[parseInt(m)-1]} ${y}`; }
+function var_gold(){ return getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()||'#b8860b'; }
+function var_warn(){ return getComputedStyle(document.documentElement).getPropertyValue('--warn').trim()||'#e07b00'; }
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+document.getElementById('modal-overlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
+</script>
+
+<!-- Apps Script source stored as plain text — avoids all JS escaping issues -->
+<script type="text/plain" id="apps-script-source">
+var SHEET = 'LogbookData';
+
+function doGet(e) {
+  var action = e.parameter.action;
+
+  if (action === 'ping') {
+    return out({ ok: true, msg: 'pong' });
+  }
+
+  if (action === 'pull') {
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var sh   = ss.getSheetByName(SHEET);
+    if (!sh) return out({ ok: false, error: 'No data yet' });
+    var raw  = sh.getRange('A1').getValue();
+    var data = raw ? JSON.parse(raw) : {};
+    return out({ ok: true, data: data });
+  }
+
+  return out({ ok: false, error: 'unknown action' });
+}
+
+function doPost(e) {
+  var body = JSON.parse(e.postData.contents);
+  if (body.action === 'push') {
+    var ss  = SpreadsheetApp.getActiveSpreadsheet();
+    var sh  = ss.getSheetByName(SHEET) || ss.insertSheet(SHEET);
+    var d   = body.data;
+    delete d.cloudUrl;
+    sh.getRange('A1').setValue(JSON.stringify(d));
+    sh.getRange('A2').setValue(new Date().toString());
+    return out({ ok: true });
+  }
+  return out({ ok: false, error: 'unknown action' });
+}
+
+function out(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+</script>
+</body>
+</html>

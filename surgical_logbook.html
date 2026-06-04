@@ -361,14 +361,26 @@ tbody td:first-child{color:var(--ink);font-weight:600}
       <div style="border-bottom:1px solid var(--rule);margin-bottom:16px;padding-bottom:4px;margin-top:20px">
         <span style="font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light)">Step C — Push &amp; Pull</span>
       </div>
-      <p style="font-size:0.88rem;color:var(--ink-light);margin-bottom:12px;line-height:1.6">
-        <strong>Push</strong> after adding entries on this device. <strong>Pull</strong> when opening on a different device to get the latest data.
+      <p style="font-size:0.88rem;color:var(--ink-light);margin-bottom:12px;line-height:1.7">
+        <strong>Push</strong> after adding entries — uploads your data to Google Sheets.<br>
+        <strong>Pull → New Tab</strong> opens a page with your cloud data. Click <em>Copy All Data</em> there, come back here, paste and import. This works even from a local file.
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn-save" onclick="pushToCloud()">⬆ Push Local → Cloud</button>
-        <button class="add-btn" onclick="pullFromCloud()">⬇ Pull Cloud → Local</button>
+        <button class="add-btn" onclick="pullFromCloud()">⬇ Pull Cloud → New Tab</button>
       </div>
-      <div id="sync-msg" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:0.72rem;min-height:20px"></div>
+      <div id="sync-msg" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:0.72rem;min-height:20px;line-height:1.6"></div>
+      <div id="paste-import-wrap" style="display:none;margin-top:14px;padding:14px;background:#f0faf4;border:1px solid #40916c;border-radius:4px">
+        <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#1a3a2a;margin-bottom:8px;line-height:1.6">
+          In the tab that opened: click <strong>Copy All Data</strong>, then paste it below and click <strong>Paste &amp; Import</strong>.
+        </p>
+        <textarea id="paste-import-ta" rows="5" placeholder="Paste cloud data here…"
+          style="width:100%;padding:10px;border:1px solid #40916c;border-radius:3px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--ink);resize:vertical;outline:none"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-save" onclick="pasteAndImport()">✓ Paste &amp; Import</button>
+          <button class="btn-cancel" onclick="document.getElementById('paste-import-wrap').style.display='none'">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <!-- OPTION 3: EXPORT / IMPORT -->
@@ -764,25 +776,37 @@ async function pushToCloud(){
   }
 }
 
-async function pullFromCloud(){
+function pullFromCloud(){
   if(!state.cloudUrl){ alert('Connect to Google Sheets first (Cloud Sync → Step B).'); return; }
-  const msg=document.getElementById('sync-msg');
-  setMsg(msg,'warn','⏳ Pulling…');
+  // Open the pull page in a new tab — user copies data, pastes back here
+  window.open(state.cloudUrl + '?action=pull', '_blank');
+  const msg = document.getElementById('sync-msg');
+  setMsg(msg,'warn','⏳ A new tab opened with your cloud data. Copy all the text there, then click "Paste && Import" below.');
+  document.getElementById('paste-import-wrap').style.display = 'block';
+}
+
+function pasteAndImport(){
+  const ta  = document.getElementById('paste-import-ta');
+  const msg = document.getElementById('sync-msg');
+  const raw = (ta.value || '').trim();
+  if(!raw){ setMsg(msg,'error','Paste your data into the box first.'); return; }
   try {
-    const res = await fetch(state.cloudUrl+'?action=pull', {mode:'cors'});
-    const json = await res.json();
-    if(json.ok && json.data){
-      if(!confirm('This will replace ALL local data with cloud data. Continue?')) return;
-      const saved=state.cloudUrl;
-      state=Object.assign({},json.data,{cloudUrl:saved});
-      save(); renderAll();
-      document.getElementById('other-activities').value=state.otherActivities||'';
-      const urlEl=document.getElementById('gsheet-url');
-      if(urlEl) urlEl.value=state.cloudUrl||'';
-      setMsg(msg,'ok','✓ Pulled at '+new Date().toLocaleTimeString());
-      updateCloudBadge(true);
-    } else { throw new Error(json.error||'No data returned. Push data first.'); }
-  } catch(e){ setMsg(msg,'error','✗ Pull failed: '+e.message); }
+    const imported = JSON.parse(raw);
+    if(!imported.operations && !imported.training && !imported.courses){
+      setMsg(msg,'error','That does not look like valid logbook data.'); return;
+    }
+    if(!confirm('Replace local data with the pasted cloud data?')) return;
+    const saved = state.cloudUrl;
+    state = Object.assign({}, imported, { cloudUrl: saved });
+    save(); renderAll();
+    document.getElementById('other-activities').value = state.otherActivities||'';
+    ta.value = '';
+    document.getElementById('paste-import-wrap').style.display = 'none';
+    setMsg(msg,'ok','✓ Imported at '+new Date().toLocaleTimeString());
+    updateCloudBadge(true);
+  } catch(err){
+    setMsg(msg,'error','✗ Could not parse data: '+err.message+'. Make sure you copied everything from the pull tab.');
+  }
 }
 
 /* ── EXPORT / IMPORT ── */
@@ -931,19 +955,32 @@ document.getElementById('modal-overlay').addEventListener('click', e=>{ if(e.tar
 var SHEET = 'LogbookData';
 
 function doGet(e) {
-  var action = e.parameter.action;
+  var action = e.parameter.action || '';
 
   if (action === 'ping') {
     return out({ ok: true, msg: 'pong' });
   }
 
   if (action === 'pull') {
+    // Returns an HTML page so the user can copy data back — no CORS issues
     var ss   = SpreadsheetApp.getActiveSpreadsheet();
     var sh   = ss.getSheetByName(SHEET);
-    if (!sh) return out({ ok: false, error: 'No data yet' });
-    var raw  = sh.getRange('A1').getValue();
-    var data = raw ? JSON.parse(raw) : {};
-    return out({ ok: true, data: data });
+    var raw  = sh ? sh.getRange('A1').getValue() : '';
+    var data = raw || '{}';
+    var page = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      + '<style>body{font-family:monospace;padding:20px;background:#1e2235;color:#b8dcc8}'
+      + 'h2{color:#f2c94c}textarea{width:100%;height:300px;background:#111;color:#6fcf97;'
+      + 'border:1px solid #444;padding:10px;font-size:12px;border-radius:4px}'
+      + 'button{margin-top:12px;padding:10px 24px;background:#2d6a4f;color:#fff;'
+      + 'border:none;border-radius:4px;cursor:pointer;font-size:14px}'
+      + 'p{color:#aaa;font-size:13px;line-height:1.6}</style></head><body>'
+      + '<h2>Surgical Logbook — Pull Data</h2>'
+      + '<p>Click inside the box below, press <strong>Ctrl+A</strong> then <strong>Ctrl+C</strong> to copy all the data, '
+      + 'then go back to your logbook and click <strong>Paste & Import</strong>.</p>'
+      + '<textarea id="d" readonly>' + data + '</textarea><br>'
+      + '<button onclick="var t=document.getElementById(\'d\');t.select();document.execCommand(\'copy\');this.textContent=\'✓ Copied!\'">Copy All Data</button>'
+      + '</body></html>';
+    return HtmlService.createHtmlOutput(page).setTitle('Logbook Pull');
   }
 
   return out({ ok: false, error: 'unknown action' });
